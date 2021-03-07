@@ -1,10 +1,15 @@
 ---
 
 - hosts: 'webservers'
-  remote_user: slave
+  become: true
   tasks:
-    - name: 'Install nginx'
+    - name: '{{ first_task_name }}'
       apt:
-        name: 'nginx'
+        name:
+          - nginx
+          - mariadb-server
+          - mariadb-client
+          - php-fpm
+          - php-mysql
         state: 'present'
       become: true
