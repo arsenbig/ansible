@@ -1,0 +1,80 @@
+---
+- name: Homework
+  hosts: all
+  become: yes
+
+  tasks:
+  - name: Install all
+    apt:
+     update_cache: yes
+     name: 
+     - nginx
+     - mariadb-server
+     - mariadb-client
+     - php-fpm
+     - php-mysql
+     - python3-pip
+     state: present
+     
+  - name: install pymysql
+    pip:
+      name: pymysql
+      state: present
+
+  - name: Create database
+    community.mysql.mysql_db:
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+      name: arsen_db
+      state: present
+
+  - name: New mysql user
+    community.mysql.mysql_user:
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+      name: 'arsenbig'
+      password: '123456'
+      priv: '*.*:ALL'
+      state: present
+
+  - name: Remove default 
+    file:
+      path: '{{ item }}'
+      state: absent
+    with_items:
+      - /etc/nginx/sites-enabled/default 
+      - /etc/nginx/sites-available/default
+     
+
+  - name: Copy nginx config 
+    copy:
+      src: /home/bogart/ansible/templates/wordpress
+      dest: /etc/nginx/sites-enabled
+
+  - name: Copy nginx config 
+    copy:
+      src: /home/bogart/ansible/templates/wordpress
+      dest: /etc/nginx/sites-available
+
+  - name: restart nginx service
+    service:
+      name: nginx
+      state: restarted
+
+  - name: download wordpress
+    get_url:
+      url: https://wordpress.org/latest.tar.gz
+      dest: /tmp/wordpress.tar.gz
+    become: true
+
+  - name: extract archive
+    ansible.builtin.unarchive:
+      src: /tmp/wordpress.tar.gz
+      dest: /var/www
+      remote_src: yes
+    become: true
+
+  - name: Change file ownership
+    ansible.builtin.file:
+      path: /var/www/wordpress
+      owner: www-data
+      group: www-data
+    become: true
